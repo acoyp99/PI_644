@@ -10,7 +10,7 @@ M2A = 13
 M2B = 19
 PWM1 = 16
 PWM2 = 26
-SERVO = 27
+SERVO = 22
 ENC1A = 2
 ENC1B = 3
 ENC2A = 14
@@ -80,6 +80,8 @@ def control_manual():
     print('HOLA')
 
 def lin_bor():
+    global data
+    global time1
     data = []
     time1 = []
     t_r_s = []
@@ -94,14 +96,17 @@ def lin_bor():
         t_r_s = t_r_s.split()
         for i in range(0, len(t_r_s)):
             t_r_s[i] = int(t_r_s[i])
-            
+        
+        if t_r_s[0]<20:
+            break
         if len(t_r_s)>6:
             if t_r_s[9]==0:
                 break
     
-        if len(t_r_s)>3:
+        elif len(t_r_s)>3:
             start = time.time()
             Err = 30 - t_r_s[3]
+            Err2 = 30 - t_r_s[4]
             if Err > 0:
                 pwmA = max_pwm
                 pwmB = int(abs(max_pwm/Err))
@@ -117,12 +122,55 @@ def lin_bor():
             motor_adelante(pwmA,pwmB)
             pwm_servo.ChangeDutyCycle(6)
             cont += 1
-        
-        pwm_servo.ChangeDutyCycle(3)
-        time.sleep(1)
             
-            
+    
+    motor_stop()  
+    pwm_servo.ChangeDutyCycle(3)
+    time.sleep(1)
+    pwm_servo.stop()
+    print(len(time1),len(data))           
+
+def lin_carr():
+    cont = 0
+    cont_time = 0
+    pwmA=0
+    pwmB=0
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    pwm_servo.start(3)
+    while cont<len(data):
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
         
+        if t_r_s[0]<20:
+            break
+        if len(t_r_s)>6:
+            if t_r_s[9]==0:
+                break
+    
+        elif len(t_r_s)>3:
+            pwmA = data[cont]
+            cont+=1
+            pwmB = data[cont]
+            motor_adelante(pwmA,pwmB)
+            pwm_servo.ChangeDutyCycle(6)
+            cont += 1
+            time.sleep(time1[cont_time])
+            cont_time += 1
+            
+    
+    motor_stop()  
+    pwm_servo.ChangeDutyCycle(3)
+    time.sleep(1)
+    pwm_servo.stop()
+    print(len(time1),len(data))           
+
+
+
+def quit1():
+    app.destroy()
 
 LARGE_FONT= ("Verdana", 14)
 m_font = ("Verdana", 10)
@@ -170,6 +218,9 @@ class StartPage(Frame):
         bottomframe.pack( side = BOTTOM )
 
         button = Button(self, text="Acceder al robot", width=30, height=5, font=m_font, relief="raised", borderwidth=5, command=lambda: controller.show_frame(Login))
+        button.pack()
+        
+        button = Button(bottomframe, text="Salir", height=2, font=m_font, relief="raised", borderwidth=5, command=quit1)
         button.pack()
         
         label = Label(bottomframe, text="PI-644 v1.0", font=m_font)
@@ -239,17 +290,17 @@ class Options(Frame):
         button1 = Button(bottomframe, text="Atrás", relief="raised", borderwidth=5, command=lambda: controller.show_frame(StartPage))
         button1.pack()
 
-        button2 = Button(self, text="Demarcado automático", relief="raised", borderwidth=5, width=25, height=3, font=m_font, command=lambda: controller.show_frame(dem_auto))
+        button2 = Button(self, text="Demarcado automático", relief="raised", borderwidth=5, width=25, height=2, font=m_font, command=lambda: controller.show_frame(dem_auto))
         button2.pack()
         
         button2 = Button(self, text="Demarcado manual",
                          relief="raised",
                          borderwidth=5, width=25,
-                         height=3, font=m_font,
+                         height=2, font=m_font,
                          command=control_manual)
         button2.pack()
         
-        button2 = Button(self, text="Estadísticas", relief="raised", borderwidth=5, width=25, height=3, font=m_font, command=lambda: controller.show_frame(sum_pc))
+        button2 = Button(self, text="Estadísticas", relief="raised", borderwidth=5, width=25, height=2, font=m_font, command=lambda: controller.show_frame(sum_pc))
         button2.pack()
 
 class sum_pc(Frame):
@@ -267,6 +318,14 @@ class sum_pc(Frame):
         bottomframe = Frame(self)
         bottomframe.pack( side = BOTTOM )
         
+        def actualizar_pintura():
+            text1 = "Cantidad de pintura: " + spin1.get() + "%"
+            label1.configure(text=text1)
+            
+        def actualizar_generador():
+            text2 = "Carga generador: " + spin2.get() + "%"
+            label2.configure(text=text2)
+        
         label = Label(topframe2, text="Estadísticas", font=LARGE_FONT)
         label.pack()
         
@@ -275,23 +334,23 @@ class sum_pc(Frame):
         
         spin1 = Spinbox(topframe1, from_=0, to=100, font=spin_font, width=8)
         spin1.pack(fill = BOTH,side=LEFT)
-        bt_pi = Button(topframe1, text="Actualizar % pintura", font=m_font)
+        bt_pi = Button(topframe1, text="Actualizar % pintura", font=m_font, command=actualizar_pintura)
         bt_pi.pack(fill = BOTH, expand = True, side=LEFT)
-        spin2 = Spinbox(topframe, from_=0, to=100, font=spin_font, width=8)
+        spin2 = Spinbox(topframe, from_=0, to=100, font=spin_font, width=8, command=actualizar_generador)
         spin2.pack(fill = BOTH,side=LEFT)
         bt_en = Button(topframe, text="Actualizar % de energía", font=m_font)
         bt_en.pack(fill = BOTH, expand = True, side=LEFT)
         
         label = Label(self, text="Control remoto: OK", font=m_font)
         label.pack(fill = BOTH, expand = True)
-        label = Label(self, text="Cantidad de pintura: 30%", borderwidth=2, relief="sunken", font=m_font)
-        label.pack(expand = True, fill=BOTH)
-        label = Label(self, text="Carga generador: 40%", borderwidth=2, relief="sunken", font=m_font)
-        label.pack(fill = BOTH, expand = True)
-        label = Label(self, text="Estado de los sensores: OK", borderwidth=2, relief="sunken", font=m_font)
-        label.pack(fill = BOTH, expand = True)
-        label = Label(self, text="Reposo del compresor: 60 minutos", borderwidth=2, relief="sunken", font=m_font)
-        label.pack(fill = BOTH, expand = True)
+        label1 = Label(self, text="Cantidad de pintura: --", borderwidth=2, relief="sunken", font=m_font)
+        label1.pack(expand = True, fill=BOTH)
+        label2 = Label(self, text="Carga generador: --", borderwidth=2, relief="sunken", font=m_font)
+        label2.pack(fill = BOTH, expand = True)
+        label3 = Label(self, text="Estado de los sensores: OK", borderwidth=2, relief="sunken", font=m_font)
+        label3.pack(fill = BOTH, expand = True)
+        label4 = Label(self, text="Reposo del compresor: 60 minutos", borderwidth=2, relief="sunken", font=m_font)
+        label4.pack(fill = BOTH, expand = True)
         
         button1 = Button(bottomframe, text="Atras", font=m_font, relief="raised", borderwidth=5, command=lambda: controller.show_frame(Options))
         button1.pack(expand = True)
@@ -350,13 +409,14 @@ class dem_auto(Frame):
             elif type_dem.get() == 'Medicion de la via':
                 print ('LIN')
             elif type_dem.get() == 'Linea de borde de pavimento':
-                print ('LIN2')
+                time.sleep(3)
+                lin_bor()
             elif type_dem.get() == 'Lineas discontinuas':
                 print ('LIN3')
             elif type_dem.get() == 'Lineas de estacionamiento':
                 print ('LIN4')
             elif type_dem.get() == 'Linea de carril':
-                print ('LIN5')    
+                lin_carr()   
         
         topframe = Frame(self)
         topframe.pack( side = TOP )
