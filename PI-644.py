@@ -10,7 +10,7 @@ M2A = 13
 M2B = 19
 PWM1 = 16
 PWM2 = 26
-SERVO = 22
+SERVO = 27
 ENC1A = 2
 ENC1B = 3
 ENC2A = 14
@@ -34,7 +34,7 @@ GPIO.setup(ENC2B,GPIO.IN)
 pwm1 = GPIO.PWM(PWM1, 100)
 pwm2 = GPIO.PWM(PWM2, 100)
 pwm_servo = GPIO.PWM(SERVO, 50)
-max_pwm = 100
+max_pwm = 50
 pwm1_value=0
 pwm2_value=0
 
@@ -79,12 +79,62 @@ def motor_stop():
 def control_manual():
     print('HOLA')
 
+
+def med_anden():
+    global data
+    global time1
+    data = []
+    time1 = []
+    t_r_s = []
+    cont = 0
+    pwmA=0
+    pwmB=0
+    max_pwm = 50
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    while True:
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
+
+        if t_r_s[0]<20:
+            motor_atras(max_pwm,max_pwm)
+            time.sleep(0.3)
+            break
+        if len(t_r_s)>6:
+            if t_r_s[9]==0:
+                break
+
+        if len(t_r_s)>3:
+            start = time.time()
+            Err = 30 - t_r_s[3]
+            Err2 = 30 - t_r_s[4]
+            if Err > 0:
+                pwmA = max_pwm
+                pwmB = int(abs(max_pwm/Err))
+            elif Err < 0:
+                pwmA = int(abs(max_pwm/Err))
+                pwmB = max_pwm
+            else:
+                pwmA = max_pwm
+                pwmB = max_pwm
+            data.append(pwmA)
+            data.append(pwmB)
+            time1.append(time.time()-start)
+            motor_adelante(pwmA,pwmB)
+            cont += 1
+             
+    motor_stop()
+    print(len(time1),len(data)) 
+
 def lin_bor():
     global data
     global time1
     data = []
     time1 = []
     t_r_s = []
+    max_pwm=50
     cont = 0
     pwmA=0
     pwmB=0
@@ -98,6 +148,8 @@ def lin_bor():
             t_r_s[i] = int(t_r_s[i])
 
         if t_r_s[0]<20:
+            motor_atras(100,100)
+            time.sleep(0.3)
             break
         if len(t_r_s)>6:
             if t_r_s[9]==0:
@@ -105,7 +157,7 @@ def lin_bor():
 
         elif len(t_r_s)>3:
             start = time.time()
-            Err = 30 - t_r_s[3]
+            Err = 25 - t_r_s[3]
             Err2 = 30 - t_r_s[4]
             if Err > 0:
                 pwmA = max_pwm
@@ -123,12 +175,63 @@ def lin_bor():
             pwm_servo.ChangeDutyCycle(6)
             cont += 1
             
-    
     motor_stop()  
     pwm_servo.ChangeDutyCycle(3)
     time.sleep(1)
     pwm_servo.stop()
     print(len(time1),len(data))           
+
+def lin_bor_sm():
+    data = []
+    time1 = []
+    t_r_s = []
+    max_pwm=50
+    cont = 0
+    pwmA=0
+    pwmB=0
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    pwm_servo.start(3)
+    while True:
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
+
+        if t_r_s[0]<20:
+            motor_atras(100,100)
+            time.sleep(0.3)
+            break
+        if len(t_r_s)>6:
+            if t_r_s[9]==0:
+                break
+
+        elif len(t_r_s)>3:
+            start = time.time()
+            Err = 25 - t_r_s[3]
+            Err2 = 30 - t_r_s[4]
+            if Err > 0:
+                pwmA = max_pwm
+                pwmB = int(abs(max_pwm/Err))
+            elif Err < 0:
+                pwmA = int(abs(max_pwm/Err))
+                pwmB = max_pwm
+            else:
+                pwmA = max_pwm
+                pwmB = max_pwm
+            data.append(pwmA)
+            data.append(pwmB)
+            time1.append(time.time()-start)
+            motor_adelante(pwmA,pwmB)
+            pwm_servo.ChangeDutyCycle(6)
+            cont += 1
+            
+    motor_stop()  
+    pwm_servo.ChangeDutyCycle(3)
+    time.sleep(1)
+    pwm_servo.stop()
+    print(len(time1),len(data))           
+
 
 def lin_carr():
     cont = 0
@@ -190,24 +293,37 @@ def giro_derecha():
 
 def anden_paralelo():
     t_r_s = []
+    cont = 0
     ser = serial.Serial('/dev/ttyUSB0',57600)
-    pwm_giro = int(max_pwm/2)
+    max_pwm = 100
     while True:
         r_s=ser.readline()
         t_r_s = r_s.decode()
         t_r_s = t_r_s.split()
         for i in range(0, len(t_r_s)):
             t_r_s[i] = int(t_r_s[i])
-        if t_r_s[0] < t_r_s[2]:
-            motor_derecha(max_pwm,int(max_pwm/3))
-        elif t_r_s[4]<30:
-            motor_stop()
+        
+#         if t_r_s[0]>t_r_s[2]:
+#             motor_stop()
+#             break
+#         elif t_r_s[3]<25:
+#             motor_stop()
+#             break
+        
+        Err = abs(t_r_s[3]-t_r_s[4])
+         
+        if Err < 5 and t_r_s[0]>50:
             break
+        else:
+            motor_adelante(max_pwm,0)
+    motor_adelante(max_pwm,40)
+    time.sleep(0.7)
+    motor_stop()
         
 def anden_perp():
     t_r_s = []
     ser = serial.Serial('/dev/ttyUSB0',57600)
-    pwm_giro = int(max_pwm/2)
+    max_pwm = 100
     cont = 0
     ref = 0
     while True:
@@ -218,7 +334,7 @@ def anden_perp():
             t_r_s[i] = int(t_r_s[i])
         if cont < 1:
             ref = t_r_s[4]
-            
+           
         cont += 1
         if t_r_s[2]<ref:
             motor_stop()
@@ -226,7 +342,7 @@ def anden_perp():
         else:
             motor_derecha(max_pwm,int(max_pwm))
 
-def anden_perp():
+def anden_paral():
     t_r_s = []
     ser = serial.Serial('/dev/ttyUSB0',57600)
     pwm_giro = int(max_pwm/2)
@@ -249,12 +365,15 @@ def anden_perp():
             motor_derecha(max_pwm,int(max_pwm)) 
 
 def adelante():
+    global time_a
     t_r_s = []
     ser = serial.Serial('/dev/ttyUSB0',57600)
-    pwm_giro = int(max_pwm/2)
+    time_a = 0
     cont = 0
     ref = 0
+    max_pwm = 100
     pwm1 = 0
+    start = time.time()
     while True:
         r_s=ser.readline()
         t_r_s = r_s.decode()
@@ -263,15 +382,44 @@ def adelante():
             t_r_s[i] = int(t_r_s[i])
 
         if t_r_s[0]<20:
-            motor_atras(100,100)
+            motor_atras(max_pwm,max_pwm)
+            time.sleep(0.3)
             motor_stop()
             break
-        elif t_r_s[0]<50 and t_r_s[0]>20:
-            pwm1 = 30
-            motor_adelante(pwm1,pwm1)
         else:
-            pwm1 = 100
-            motor_adelante(pwm1,pwm1)
+            motor_adelante(max_pwm,max_pwm)
+            
+    time_a = time.time()-start-0.3
+    print(time_a)      
+def adelante_mitad():
+    t_r_s = []
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    time2 = 0
+    cont = 0
+    ref = 0
+    max_pwm = 100
+    pwm1 = 0
+    while True:
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
+
+        if t_r_s[0]>130 or t_r_s[2]<100:
+            motor_adelante(max_pwm,max_pwm)
+        else:
+            break
+        
+    motor_atras(max_pwm,max_pwm)
+    time.sleep(0.2)
+    motor_stop()
+
+def derecha_sf():
+    motor_derecha(100,100)
+    time.sleep(1)
+    motor_stop()
+
 
 def quit1():
     app.destroy()
@@ -486,26 +634,43 @@ class dem_auto(Frame):
         # Función general
         def func():
             if type_dem.get() == 'Medición del anden':
-                print ('Medición')
+                med_anden()
             elif type_dem.get() == 'Medicion de la via':
-                print ('LIN')
+                time.sleep(2)
+                lin_bor_sm()
             elif type_dem.get() == 'Linea de borde de pavimento':
-                time.sleep(3)
-                lin_bor()
-                time.sleep(3)
-                giro_derecha()
+                time.sleep(2)
+                anden_paralelo()
             elif type_dem.get() == 'Lineas discontinuas':
                 time.sleep(2)
                 anden_perp()
             elif type_dem.get() == 'Lineas de estacionamiento':
                 time.sleep(2)
-                adelante()
+                adelante_mitad()
+                time.sleep(1)
+                derecha_sf()
             elif type_dem.get() == 'Linea de carril':
                 time.sleep(2)
                 lin_carr()
             elif type_dem.get() == 'Trazado completo':
                 time.sleep(2)
+                lin_bor()
+                time.sleep(2)
+                anden_perp()
+                time.sleep(2)
+                adelante()
+                time.sleep(2)
                 anden_paralelo()
+                time.sleep(2)
+                lin_bor_sm()
+                time.sleep(2)
+                anden_perp()
+                time.sleep(2)
+                adelante_mitad()
+                time.sleep(1)
+                derecha_sf()
+                time.sleep(2)
+                lin_carr()
         
         topframe = Frame(self)
         topframe.pack( side = TOP )
@@ -546,12 +711,6 @@ class dem_auto(Frame):
         button2 = Button(topframe, text="Iniciar demarcado", relief="raised", borderwidth=5, width=20, height=2, state=NORMAL, command=func)
         button2.pack()
         
-        L4 = Label(bottomframe, text="Proceso en curso...", width=15)
-        L4.pack(side=LEFT)
-        L4 = Label(bottomframe, text="86%...", width=10)
-        L4.pack(side=LEFT)
-        L4 = Label(bottomframe, text="Estado: OK", width=13)
-        L4.pack(side=LEFT)
         
         button1 = Button(bottomframe1, text="Atras", relief="raised", borderwidth=5, state=NORMAL, command=lambda: controller.show_frame(Options))
         button1.pack()
@@ -561,3 +720,4 @@ full = '460x300'
 app.attributes("-fullscreen", True)
 app.title("Demarcador vial")
 app.mainloop()
+
