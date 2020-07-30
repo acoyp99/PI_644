@@ -167,7 +167,73 @@ def lin_carr():
     pwm_servo.stop()
     print(len(time1),len(data))           
 
+def giro_derecha():
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    pwm_giro = int(max_pwm/2)
+    while True:
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
+            
+        if len(t_r_s) > 3:
+            if t_r_s[3] > 70 or t_r_s[1] > 70:
+                if t_r_s[3] - t_r_s[1]:
+                    motor_derecha(pwm_giro,pwm_giro)
+                else:
+                    motor_izquierda(pwm_giro,pwm_giro)      
+            elif t_r_s[2]<20:
+                break
+            else:
+                motor_stop()
 
+def anden_paralelo():
+    t_r_s = []
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    pwm_giro = int(max_pwm/2)
+    while True:
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
+        if t_r_s[0] < t_r_s[2]:
+            motor_derecha(max_pwm,int(max_pwm/3))
+        elif t_r_s[4]<30:
+            motor_stop()
+            break
+        
+def anden_perp():
+    t_r_s = []
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    pwm_giro = int(max_pwm/2)
+    cont = 0
+    ref = 0
+    while True:
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
+        if cont < 1:
+            ref = t_r_s[4]
+            
+        cont += 1
+        if t_r_s[2]<ref:
+            motor_stop()
+            break
+        else:
+            motor_derecha(max_pwm,int(max_pwm)) 
+            
+#         if len(t_r_s) > 3 and t_r_s[1]>70:
+#             if t_r_s[0]<30 and t_r_s[2]>30:
+#                 motor_derecha(max_pwm,max_pwm)
+#             else:
+#                 motor_stop()
+#                 break
+#             
+            
 
 def quit1():
     app.destroy()
@@ -361,29 +427,6 @@ class dem_man(Frame):
         Frame.__init__(self,parent)
         #Top Frame
         topframe = Frame(self)
-        topframe.pack( side = TOP )
-        topframe1 = Frame(topframe)
-        topframe1.pack( side = TOP )
-        #Bottom Frame
-        bottomframe = Frame(self)
-        bottomframe.pack( side = BOTTOM )
-        
-        label = Label(topframe1, text="Demarcación manual", font=LARGE_FONT)
-        label.pack()
-        
-        label = Label(topframe1, text="Estado de comunicación: OK", font=m_font)
-        label.pack()
-        
-        label = Label(topframe, text="PINTADO", height=2, borderwidth=2, relief="solid", font=m_font)
-        label.pack()
-        
-        label = Label(topframe, text="MOTOR DERECHA", height=2, borderwidth=2, relief="solid", font=m_font)
-        label.pack(side=LEFT)
-        label = Label(topframe, text="MOTOR IZQUIERDA", height=2, borderwidth=2, relief="solid", font=m_font)
-        label.pack(side=LEFT)
-        
-        button1 = Button(bottomframe, text="Atras", height=2, font=m_font, relief="raised", borderwidth=5, command=lambda: controller.show_frame(Options))
-        button1.pack()
 
         
 class dem_auto(Frame):
@@ -411,12 +454,20 @@ class dem_auto(Frame):
             elif type_dem.get() == 'Linea de borde de pavimento':
                 time.sleep(3)
                 lin_bor()
+                time.sleep(3)
+                giro_derecha()
             elif type_dem.get() == 'Lineas discontinuas':
-                print ('LIN3')
+                time.sleep(2)
+                anden_perp()
             elif type_dem.get() == 'Lineas de estacionamiento':
-                print ('LIN4')
+                time.sleep(2)
+                anden_paralelo()
             elif type_dem.get() == 'Linea de carril':
-                lin_carr()   
+                time.sleep(2)
+                lin_carr()
+            elif type_dem.get() == 'Trazado completo':
+                time.sleep(2)
+                anden_paralelo()
         
         topframe = Frame(self)
         topframe.pack( side = TOP )
@@ -438,7 +489,8 @@ class dem_auto(Frame):
         L1 = Label(topframe3, text="Configuración de demarcado", font=m_font)
         L1.pack()
         type_dem = StringVar(self)
-        o_u = ["Medición del anden", "Medicion de la via", "Linea de borde de pavimento", "Lineas discontinuas", "Lineas de estacionamiento", "Linea de carril"]
+        o_u = ["Medición del anden", "Medicion de la via", "Linea de borde de pavimento",
+               "Lineas discontinuas", "Lineas de estacionamiento", "Linea de carril", "Trazado completo"]
         type_dem.set(o_u[0])
         combo_U = OptionMenu(topframe3, type_dem, *o_u)
         combo_U.pack() 
