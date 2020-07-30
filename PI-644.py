@@ -96,13 +96,13 @@ def lin_bor():
         t_r_s = t_r_s.split()
         for i in range(0, len(t_r_s)):
             t_r_s[i] = int(t_r_s[i])
-        
+
         if t_r_s[0]<20:
             break
         if len(t_r_s)>6:
             if t_r_s[9]==0:
                 break
-    
+
         elif len(t_r_s)>3:
             start = time.time()
             Err = 30 - t_r_s[3]
@@ -224,16 +224,54 @@ def anden_perp():
             motor_stop()
             break
         else:
+            motor_derecha(max_pwm,int(max_pwm))
+
+def anden_perp():
+    t_r_s = []
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    pwm_giro = int(max_pwm/2)
+    cont = 0
+    ref = 0
+    while True:
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
+        if cont < 1:
+            ref = t_r_s[0]
+            
+        cont += 1
+        if t_r_s[4]<ref:
+            motor_stop()
+            break
+        else:
             motor_derecha(max_pwm,int(max_pwm)) 
-            
-#         if len(t_r_s) > 3 and t_r_s[1]>70:
-#             if t_r_s[0]<30 and t_r_s[2]>30:
-#                 motor_derecha(max_pwm,max_pwm)
-#             else:
-#                 motor_stop()
-#                 break
-#             
-            
+
+def adelante():
+    t_r_s = []
+    ser = serial.Serial('/dev/ttyUSB0',57600)
+    pwm_giro = int(max_pwm/2)
+    cont = 0
+    ref = 0
+    pwm1 = 0
+    while True:
+        r_s=ser.readline()
+        t_r_s = r_s.decode()
+        t_r_s = t_r_s.split()
+        for i in range(0, len(t_r_s)):
+            t_r_s[i] = int(t_r_s[i])
+
+        if t_r_s[0]<20:
+            motor_atras(100,100)
+            motor_stop()
+            break
+        elif t_r_s[0]<50 and t_r_s[0]>20:
+            pwm1 = 30
+            motor_adelante(pwm1,pwm1)
+        else:
+            pwm1 = 100
+            motor_adelante(pwm1,pwm1)
 
 def quit1():
     app.destroy()
@@ -461,7 +499,7 @@ class dem_auto(Frame):
                 anden_perp()
             elif type_dem.get() == 'Lineas de estacionamiento':
                 time.sleep(2)
-                anden_paralelo()
+                adelante()
             elif type_dem.get() == 'Linea de carril':
                 time.sleep(2)
                 lin_carr()
